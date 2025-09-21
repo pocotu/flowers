@@ -35,6 +35,95 @@ let fraseIndex = 0;
 let frasesActivas = [];
 let ultimoClick = 0;
 
+// Sistema de música
+let audioElement;
+let isPlaying = false;
+let musicButton;
+
+// Inicializar sistema de audio
+function initAudio() {
+  try {
+    audioElement = new Audio('musica.mp3');
+    audioElement.loop = true;
+    audioElement.volume = 0.5; // 50% de volumen
+    audioElement.preload = 'auto';
+    audioElement.muted = false;
+    
+    // Forzar reproducción inmediata
+    audioElement.play().then(() => {
+      isPlaying = true;
+      updateMusicButton();
+      console.log('Música iniciada automáticamente');
+    }).catch(error => {
+      console.log('Intento 1 falló, probando método alternativo...');
+      
+      // Método alternativo: crear elemento audio en el DOM
+      const audioInDOM = document.createElement('audio');
+      audioInDOM.src = 'musica.mp3';
+      audioInDOM.loop = true;
+      audioInDOM.volume = 0.5;
+      audioInDOM.autoplay = true;
+      audioInDOM.preload = 'auto';
+      audioInDOM.style.display = 'none';
+      document.body.appendChild(audioInDOM);
+      
+      audioInDOM.play().then(() => {
+        audioElement = audioInDOM;
+        isPlaying = true;
+        updateMusicButton();
+        console.log('Música iniciada con método alternativo');
+      }).catch(err => {
+        console.log('Autoplay completamente bloqueado');
+        // Como último recurso, iniciar con cualquier interacción
+        const forceStart = (e) => {
+          audioElement.play().then(() => {
+            isPlaying = true;
+            updateMusicButton();
+          });
+          document.removeEventListener('click', forceStart, true);
+          document.removeEventListener('touchstart', forceStart, true);
+          document.removeEventListener('keydown', forceStart, true);
+        };
+        
+        document.addEventListener('click', forceStart, true);
+        document.addEventListener('touchstart', forceStart, true);
+        document.addEventListener('keydown', forceStart, true);
+      });
+    });
+  } catch (error) {
+    console.log('Audio no disponible:', error);
+  }
+}
+
+function toggleMusic() {
+  if (!audioElement) return;
+  
+  if (isPlaying) {
+    audioElement.pause();
+    isPlaying = false;
+  } else {
+    audioElement.play().then(() => {
+      isPlaying = true;
+    }).catch(error => {
+      console.log('Error al reproducir audio');
+    });
+  }
+  
+  updateMusicButton();
+}
+
+function updateMusicButton() {
+  if (musicButton) {
+    if (isPlaying) {
+      musicButton.classList.remove('muted');
+      musicButton.querySelector('.music-icon').textContent = '🎵';
+    } else {
+      musicButton.classList.add('muted');
+      musicButton.querySelector('.music-icon').textContent = '🔇';
+    }
+  }
+}
+
 function mostrarFrase(x, y) {
   // Prevenir clicks/toques duplicados muy rápidos
   const ahora = Date.now();
@@ -100,4 +189,55 @@ onload = () => {
   // Agregar event listeners para click y touch
   document.addEventListener('click', handleClick);
   document.addEventListener('touchstart', handleTouch);
+  
+  // Inicializar sistema de música
+  musicButton = document.getElementById('musicToggle');
+  audioElement = document.getElementById('backgroundMusic');
+  
+  if (audioElement) {
+    audioElement.volume = 0.25; // 25% de volumen
+    
+    // Intentar reproducir inmediatamente
+    audioElement.play().then(() => {
+      isPlaying = true;
+      updateMusicButton();
+      console.log('Música AUTO iniciada desde HTML');
+    }).catch(error => {
+      console.log('Autoplay bloqueado, se iniciará con interacción');
+      isPlaying = false;
+      updateMusicButton();
+    });
+    
+    // Event listener para cuando la música está lista
+    audioElement.addEventListener('canplaythrough', () => {
+      if (!isPlaying) {
+        audioElement.play().then(() => {
+          isPlaying = true;
+          updateMusicButton();
+        }).catch(() => {});
+      }
+    });
+  }
+  
+  if (musicButton) {
+    musicButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMusic();
+    });
+  }
+  
+  // Como respaldo, intentar iniciar con cualquier interacción
+  const startMusic = () => {
+    if (audioElement && !isPlaying) {
+      audioElement.play().then(() => {
+        isPlaying = true;
+        updateMusicButton();
+      });
+    }
+    document.removeEventListener('click', startMusic, true);
+    document.removeEventListener('touchstart', startMusic, true);
+  };
+  
+  document.addEventListener('click', startMusic, true);
+  document.addEventListener('touchstart', startMusic, true);
 };
