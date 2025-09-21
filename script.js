@@ -1,4 +1,3 @@
-// Frases románticas para Margot
 const frases = [
   "Eres el sol que ilumina mi día",
   "Tus besos son mi motivación",
